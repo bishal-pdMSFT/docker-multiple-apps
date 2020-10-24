@@ -1,0 +1,51 @@
+on: [push]
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    
+    - uses: azure/docker-login@v1
+      with:
+        login-server: bishalcontainer1acr.azurecr.io
+        username: ${{secrets.acr_bishalcontainer1acr_username}}
+        password: ${{secrets.acr_bishalcontainer1acr_password}}
+    
+    - name: Build and push image to ACR
+      id: build-image
+      run: |
+        docker build "$GITHUB_WORKSPACE/linux_tweet_app-1" -f  "linux_tweet_app-1/Dockerfile" -t bishalcontainer1acr.azurecr.io/bishalbugbashaks576b:${{github.sha}}
+        docker push bishalcontainer1acr.azurecr.io/bishalbugbashaks576b:${{github.sha}}
+    
+    - uses: azure/k8s-set-context@v1
+      with:
+         kubeconfig: ${{secrets.aks_bishalbugbashaks_kubeConfig}}
+      id: login
+    
+    - name: Create namespace
+      run: |
+        namespacePresent=`kubectl get namespace | grep bishalbugbashaks576b | wc -l`
+        if [ $namespacePresent -eq 0 ]
+        then
+            echo `kubectl create namespace bishalbugbashaks576b`
+        fi
+
+    - uses: azure/k8s-create-secret@v1
+      with:
+        namespace: bishalbugbashaks576b
+        container-registry-url: bishalcontainer1acr.azurecr.io
+        container-registry-username: ${{secrets.acr_bishalcontainer1acr_username}}
+        container-registry-password: ${{secrets.acr_bishalcontainer1acr_password}}
+        secret-name: bishalbugbasdockerauth
+       
+    - uses: azure/k8s-deploy@v1.2
+      with:
+        namespace: bishalbugbashaks576b
+        manifests: |
+          linux_tweet_app-1/manifests/deployment-576b.yml
+          linux_tweet_app-1/manifests/service-576b.yml
+          linux_tweet_app-1/manifests/ingress-576b.yml
+        images: |
+          bishalcontainer1acr.azurecr.io/bishalbugbashaks576b:${{github.sha}}
+        imagepullsecrets: |
+          bishalbugbasdockerauth
