@@ -1,0 +1,19 @@
+apiVersion : apps/v1
+kind: Deployment
+metadata:
+  name: "bishalbugbashaks-576b"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: "bishalbugbashaks-576b"
+  template:
+    metadata:
+      labels:
+        app: "bishalbugbashaks-576b"
+    spec:
+      containers:
+        - name: "bishalbugbashaks-576b"
+          image: "bishalcontainer1acr.azurecr.io/bishalbugbashaks576b"
+          ports:
+          - containerPort: 80
